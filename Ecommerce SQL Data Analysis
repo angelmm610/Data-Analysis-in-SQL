@@ -1,0 +1,276 @@
+/* 
+
+DATA ANALYSIS PROJECT IN SQL AND TABLEAU USING ECOMMERCE PRODUCT SALES DATA:
+
+Purpose is to perform a real-world type data analysis project for my pretend employer.
+
+Business Objectives - My employer has asked me to answer some specific business questions (listed below)
+and to create a way to track certain KPI’s for future monitoring (Tableau dashboard created based on analysis).
+
+Questions my employer wants answers to:
+
+•	Which products generated highest revenue?
+•	Which products generated highest profit?
+•	What is total revenue and profit?
+•	What was the AOV?
+•	Which products performed poorly in revenue?
+•	Which products performed poorly in profit?
+•	Which products had highest average review scores?
+•	Which products had lowest average review scores?
+•	What is the average review score for all products?
+•	Which cities had the most customers?
+•	Which cities had the least customers?
+•	Which payment installment option was most popular?
+•	What are the stats by payment type? 
+•	What is the average order processing and delivery times?
+
+*/
+
+
+--Creating tables to import large datasets from Excel
+
+CREATE TABLE customers (
+customer_id VARCHAR(250),
+customer_unique_id VARCHAR(250),
+customer_zip_code_prefix TEXT,
+customer_city TEXT,
+customer_state TEXT
+);
+
+
+CREATE TABLE order_items (
+order_id VARCHAR(250),
+items_ordered INTEGER,
+product_id VARCHAR(250),
+seller_id VARCHAR(250),
+shipping_limit_date DATE,
+sale_price NUMERIC,
+item_cost NUMERIC
+);
+
+
+CREATE TABLE order_payments (
+order_id VARCHAR(250),
+payment_sequential INTEGER,
+payment_type VARCHAR(250),	
+payment_installments INTEGER
+);
+
+
+CREATE TABLE order_reviews (
+review_id VARCHAR(250),
+order_id VARCHAR(250),
+review_score INTEGER,
+review_comment_title VARCHAR(250),	
+review_comment_message VARCHAR(250),
+review_creation_date DATE,
+review_answer_timestamp DATE
+);
+
+
+CREATE TABLE orders (
+order_id VARCHAR(250),
+customer_id VARCHAR(250),
+order_status TEXT,
+order_purchase_timestamp VARCHAR(250),
+order_approved_at VARCHAR(250),
+order_delivered_carrier_date VARCHAR(250),
+order_delivered_customer_date VARCHAR(250),
+order_estimated_delivery_date VARCHAR(250)
+);
+
+
+--Verifying that data imported properly
+
+SELECT *
+FROM customers;
+
+SELECT *
+FROM order_items;
+
+SELECT *
+FROM order_payments;
+
+SELECT *
+FROM order_reviews;
+
+SELECT *
+FROM orders;
+
+
+--Export this for future dashboard creation (revenue, profit, cost data)
+
+SELECT a.order_id, a.items_ordered, a.product_id, a.sale_price, a.item_cost,
+b.order_id, b.payment_type, b.payment_installments
+FROM order_items AS a
+INNER JOIN order_payments AS b
+ON a.order_id = b.order_id;
+
+
+--Total revenue calculation
+
+SELECT SUM((items_ordered * sale_price)) AS gross_revenue
+FROM order_items;
+
+
+--Revenue by product
+
+SELECT product_id, items_ordered, sale_price, (items_ordered * sale_price) AS revenue
+FROM order_items;
+
+
+--Products with highest revenue
+
+SELECT product_id, (items_ordered * sale_price) AS high_revenue_products
+FROM order_items
+GROUP BY 1,2
+ORDER BY (items_ordered * sale_price) DESC 
+LIMIT 100;
+
+
+--Products with lowest revenue
+
+SELECT product_id, (items_ordered * sale_price) AS low_revenue_products
+FROM order_items
+GROUP BY 1,2
+ORDER BY (items_ordered * sale_price) ASC 
+LIMIT 100;
+
+
+--Total profit calculation
+
+SELECT SUM(((items_ordered * sale_price) - (items_ordered * item_cost))) AS net_profit
+FROM order_items;
+
+
+--Profit by product
+
+SELECT product_id, items_ordered, sale_price, (items_ordered * sale_price) AS revenue, item_cost,
+(items_ordered * item_cost) AS total_cost, ((items_ordered * sale_price) - (items_ordered * item_cost)) AS profit
+FROM order_items;
+
+
+--Products with highest profit
+
+SELECT product_id, ((items_ordered * sale_price) - (items_ordered * item_cost)) AS high_profit_products
+FROM order_items
+GROUP BY 1,2
+ORDER BY ((items_ordered * sale_price) - (items_ordered * item_cost)) DESC 
+LIMIT 100;
+
+
+--Products with lowest profit
+
+SELECT product_id, ((items_ordered * sale_price) - (items_ordered * item_cost)) AS high_profit_products
+FROM order_items
+GROUP BY 1,2
+ORDER BY ((items_ordered * sale_price) - (items_ordered * item_cost)) ASC 
+LIMIT 100;
+
+
+--Total cost calculation
+
+SELECT SUM((items_ordered * item_cost)) AS gross_cost
+FROM order_items;
+
+
+--Cost by product
+
+SELECT product_id, items_ordered, item_cost, (items_ordered * item_cost) AS total_cost
+FROM order_items;
+
+
+--AOV calculation
+
+SELECT ROUND(((SUM((items_ordered * sale_price))) / (SUM(items_ordered))), 2) AS aov 
+FROM order_items;
+
+
+--Stats by payment type
+
+SELECT payment_type, COUNT(payment_type)
+FROM order_payments
+WHERE payment_type != 'not_defined'
+GROUP BY payment_type
+ORDER BY COUNT(payment_type) DESC;
+
+
+--Finding popularity of payment installment options
+
+SELECT payment_installments, COUNT(payment_installments)
+FROM order_payments
+GROUP BY payment_installments
+ORDER BY COUNT(payment_installments) DESC;
+
+
+--Reviews by product
+
+SELECT b.product_id, a.review_id, a.order_id, a.review_score 
+FROM order_reviews AS a
+INNER JOIN order_items AS b
+ON a.order_id = b.order_id;
+
+
+--Average review score for all products
+
+SELECT ROUND(AVG(review_score), 3) AS avg_review_score
+FROM order_reviews;
+
+
+--Products with highest reviews
+
+SELECT b.product_id, a.review_score 
+FROM order_reviews AS a
+INNER JOIN order_items AS b
+ON a.order_id = b.order_id
+ORDER BY review_score DESC
+LIMIT 100;
+
+
+--Products with lowest reviews
+
+SELECT b.product_id, a.review_score 
+FROM order_reviews AS a
+INNER JOIN order_items AS b
+ON a.order_id = b.order_id
+ORDER BY review_score ASC
+LIMIT 100;
+
+
+--Cities with the most customers
+
+SELECT COUNT(customer_unique_id) AS num_customers, customer_city
+FROM customers
+GROUP BY customer_city
+ORDER BY COUNT(customer_unique_id) DESC
+LIMIT 100;
+
+
+--Cities with the least customers
+
+SELECT COUNT(customer_unique_id) AS num_customers, customer_city
+FROM customers
+GROUP BY customer_city
+ORDER BY COUNT(customer_unique_id) ASC
+LIMIT 100;
+
+
+--Calculating order process times and order delivery times for all orders
+
+SELECT order_id, order_purchase_timestamp, order_approved_at, order_delivered_customer_date, 
+AGE(order_approved_at::TIMESTAMP, order_purchase_timestamp::TIMESTAMP) AS process_time,
+AGE(order_delivered_customer_date::TIMESTAMP, order_purchase_timestamp::TIMESTAMP) AS delivery_time
+FROM orders;
+
+
+--Average order processing time calculation
+
+SELECT AVG(AGE(order_approved_at::TIMESTAMP, order_purchase_timestamp::TIMESTAMP)) AS avg_process_time
+FROM orders;
+
+
+--Average order delivery time calculation
+
+SELECT AVG(AGE(order_delivered_customer_date::TIMESTAMP, order_purchase_timestamp::TIMESTAMP)) AS avg_delivery_time
+FROM orders;
+
